@@ -1,27 +1,25 @@
 services:
-  # Backend: Python FastAPI Web Service
+  # Backend Web Service
   - type: web
     name: ask-my-docs-backend
     env: python
-    region: ohio
-    plan: free
-    rootDir: backend
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port 10000
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: GROQ_API_KEY
-        sync: false # Set manually in Render dashboard
+        sync: false # User will fill this in the UI
       - key: PYTHON_VERSION
         value: 3.10.0
 
-  # Frontend: React Vite Static Site
-  - type: web
+  # Frontend Static Site
+  - type: static
     name: ask-my-docs-frontend
-    runtime: static
-    rootDir: frontend
-    buildCommand: npm install && npm run build
-    staticPublishPath: dist
+    env: static
+    buildCommand: cd frontend && npm install && npm run build
+    publishPath: frontend/dist
     envVars:
       - key: VITE_API_URL
-        sync: false # Set this to your backend's public URL in Render dashboard (e.g. https://your-app.onrender.com/api)
-
+        fromService:
+          name: ask-my-docs-backend
+          type: web
+          property: url

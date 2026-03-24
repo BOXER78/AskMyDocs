@@ -54,6 +54,20 @@ function App() {
     return () => clearTimeout(timer)
   }, [messages, isTyping, streamingMessage])
 
+  // Proactive warm-up ping for Render backend
+  useEffect(() => {
+    const warmup = async () => {
+      try {
+        const healthUrl = API_BASE_URL.replace(/\/api$/, '') + '/health'
+        await axios.get(healthUrl)
+        console.log("Backend connection established")
+      } catch (err) {
+        console.warn("Warm-up ping failed:", err.message)
+      }
+    }
+    warmup()
+  }, [])
+
   const handleFileChange = async (e) => {
     const selectedFile = e.target.files[0]
     if (!selectedFile) return
@@ -61,14 +75,13 @@ function App() {
       alert("Please upload a PDF file.")
       return
     }
-    setFile(selectedFile)
-    await uploadDocument(selectedFile)
-  }
 
-  const uploadDocument = async (selectedFile) => {
+    setFile(selectedFile)
     setUploadStatus('uploading')
+
     const formData = new FormData()
     formData.append('file', selectedFile)
+
     try {
       await axios.post(`${API_BASE_URL}/upload`, formData)
       setUploadStatus('success')
@@ -76,10 +89,10 @@ function App() {
         role: 'system',
         content: `Document analyzed: ${selectedFile.name}`
       }])
-    } catch (error) {
+    } catch (err) {
+      console.error("Upload error details:", err)
+      const errorMsg = err.response?.data?.detail || err.message
       setUploadStatus('error')
-      const msg = error.response ? ` (Status: ${error.response.status})` : ` (${error.message})`
-      setMessages(prev => [...prev, { role: 'system', content: `Upload failed: ${msg}. Check console.` }])
       console.error("Upload error:", error)
     }
   }
