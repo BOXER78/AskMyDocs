@@ -19,7 +19,4 @@ services:
     buildCommand: cd frontend && npm install && npm run build
     envVars:
       - key: VITE_API_URL
-        fromService:
-          name: ask-my-docs-backend
-          type: web
-          property: url
+        sync: false # User will fill this in the UI
