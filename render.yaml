@@ -12,10 +12,11 @@ services:
         value: 3.10.0
 
   # Frontend Static Site
-  - type: static_site
+  - type: web
     name: ask-my-docs-frontend
-    buildCommand: cd frontend && npm install && npm run build
+    runtime: static
     staticPublishPath: frontend/dist
+    buildCommand: cd frontend && npm install && npm run build
     envVars:
       - key: VITE_API_URL
         fromService:
