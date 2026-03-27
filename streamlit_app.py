@@ -215,3 +215,4 @@ if prompt := st.chat_input("What would you like to know about the document?"):
                 
             except Exception as e:
                 st.error(f"AI Error: {e}")
+
