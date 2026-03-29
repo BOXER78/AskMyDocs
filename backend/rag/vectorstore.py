@@ -196,3 +196,4 @@ def ask_question(query: str):
         chat_history = chat_history[-20:]
         
     return answer
+
