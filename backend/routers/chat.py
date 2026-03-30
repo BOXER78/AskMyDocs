@@ -66,3 +66,4 @@ async def ask_chatbot(request: QueryRequest):
         if "rate limit" in error_str or "429" in error_str:
             raise HTTPException(status_code=429, detail="AI Rate limit reached. Please try again in a few minutes.")
         raise HTTPException(status_code=500, detail=f"AI processing error: {str(e)}")
+
