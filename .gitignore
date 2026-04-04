@@ -35,3 +35,4 @@ Thumbs.db
 /backend/rag/faiss_index/
 /backend/tmp/
 .model_cache/
+
