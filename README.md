@@ -78,3 +78,4 @@ graph TD
 - `frontend/src/App.css`: Custom UI styles and branding.
 - `render.yaml`: Blueprint for cloud deployment on Render.com.
 
+
