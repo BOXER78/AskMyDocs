@@ -10,3 +10,7 @@ python-dotenv
 sentence-transformers
 pydantic
 python-multipart
+youtube-transcript-api
+beautifulsoup4
+pytube
+lxml

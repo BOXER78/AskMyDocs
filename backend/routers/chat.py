@@ -12,6 +12,9 @@ router = APIRouter()
 class QueryRequest(BaseModel):
     query: str
 
+class UrlRequest(BaseModel):
+    url: str
+
 import traceback
 
 @router.post("/upload")
@@ -33,6 +36,21 @@ async def upload_document(file: UploadFile = File(...)):
     finally:
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)
+
+from rag.vectorstore import process_and_store_url
+
+@router.post("/load-url")
+async def load_url(request: UrlRequest):
+    if not request.url.strip():
+        raise HTTPException(status_code=400, detail="URL cannot be empty.")
+        
+    try:
+        process_and_store_url(request.url.strip())
+        return {"message": "URL processed and stored successfully."}
+    except Exception as e:
+        print(f"Error processing URL: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to process URL: {str(e)}")
 
 @router.post("/ask")
 async def ask_chatbot(request: QueryRequest):
