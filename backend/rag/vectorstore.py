@@ -1,7 +1,10 @@
-import os
-import subprocess
 import shutil
 import tempfile
+import traceback
+
+os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
+os.environ["SENTENCE_TRANSFORMERS_HOME"] = "./.model_cache"
+
 from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_groq import ChatGroq
@@ -86,6 +89,11 @@ def process_and_store_repo(repo_path: str):
         try:
             subprocess.run(["git", "clone", "--depth", "1", repo_path, temp_dir], check=True, capture_output=True)
             effective_path = temp_dir
+        except subprocess.CalledProcessError as sc:
+            if os.path.exists(temp_dir):
+                shutil.rmtree(temp_dir)
+            error_details = sc.stderr.decode() if sc.stderr else str(sc)
+            raise ValueError(f"Git Clone Failed: {error_details}")
         except Exception as e:
             if os.path.exists(temp_dir):
                 shutil.rmtree(temp_dir)

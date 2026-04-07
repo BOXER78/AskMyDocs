@@ -12,6 +12,11 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 from dotenv import load_dotenv
+import logging
+
+# Suppress HuggingFace warnings and set cache
+os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
+os.environ["SENTENCE_TRANSFORMERS_HOME"] = "./.model_cache"
 
 # Page configuration
 st.set_page_config(page_title="AskMyDocs", page_icon="🦀", layout="wide")
@@ -110,8 +115,12 @@ with st.sidebar:
                         st.success(f"Successfully indexed: {st.session_state.processed_file}")
                         st.session_state.messages = [] # Clear chat for new context
 
+                except subprocess.CalledProcessError as sc:
+                    st.error(f"Git Clone Error: {sc.stderr.decode() if sc.stderr else str(sc)}")
                 except Exception as e:
-                    st.error(f"Error indexing repo: {e}")
+                    import traceback
+                    st.error(f"Error indexing repo: {str(e)}")
+                    st.expander("Show detailed error").code(traceback.format_exc())
                 finally:
                     if is_github and temp_dir and os.path.exists(temp_dir):
                         shutil.rmtree(temp_dir)
