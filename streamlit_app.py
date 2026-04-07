@@ -1,7 +1,9 @@
 import streamlit as st
 import os
 import tempfile
-from langchain_community.document_loaders import PyPDFLoader
+from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader, TextLoader
+import subprocess
+import shutil
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_groq import ChatGroq
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -16,15 +18,15 @@ st.set_page_config(page_title="AskMyDocs", page_icon="🦀", layout="wide")
 
 # Load environment variables
 load_dotenv()
+load_dotenv("backend/.env")
 
 # Initialize session state for chat and vector store
-# Initialize session state for chat and vector store
 if "messages" not in st.session_state:
-    st.session_state["messages"] = []
+    st.session_state.messages = []
 if "vector_db" not in st.session_state:
-    st.session_state["vector_db"] = None
+    st.session_state.vector_db = None
 if "processed_file" not in st.session_state:
-    st.session_state["processed_file"] = None
+    st.session_state.processed_file = None
 
 # Sidebar for file upload
 with st.sidebar:
@@ -58,6 +60,64 @@ with st.sidebar:
                 if os.path.exists(tmp_path):
                     os.remove(tmp_path)
     
+    st.divider()
+    st.title("📂 Repository Analysis")
+    repo_input = st.text_input("Enter Local Path or GitHub URL", placeholder="e.g. https://github.com/user/repo")
+    if st.button("Analyze Repo", use_container_width=True):
+        if repo_input.strip():
+            with st.spinner("Indexing repository..."):
+                repo_path = repo_input.strip()
+                is_github = repo_path.startswith("http") and "github.com" in repo_path
+                temp_dir = None
+                
+                try:
+                    if is_github:
+                        temp_dir = tempfile.mkdtemp(prefix="st_repo_")
+                        subprocess.run(["git", "clone", "--depth", "1", repo_path, temp_dir], check=True, capture_output=True)
+                        effective_path = temp_dir
+                    else:
+                        if not os.path.exists(repo_path):
+                            st.error(f"Local path does not exist: {repo_path}")
+                            st.stop()
+                        effective_path = repo_path
+
+                    # Index common code and text files
+                    supported_extensions = [".py", ".js", ".jsx", ".tsx", ".ts", ".html", ".css", ".md", ".txt", ".json", ".yaml", ".yml"]
+                    
+                    documents = []
+                    for ext in supported_extensions:
+                        loader = DirectoryLoader(
+                            effective_path,
+                            glob=f"**/*{ext}",
+                            loader_cls=TextLoader,
+                            use_multithreading=True,
+                            exclude=["**/node_modules/**", "**/venv/**", "**/.git/**", "**/dist/**", "**/build/**", "**/__pycache__/**"]
+                        )
+                        try:
+                            documents.extend(loader.load())
+                        except:
+                            pass
+
+                    if not documents:
+                        st.error("No supported files found in the directory.")
+                    else:
+                        splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=300)
+                        docs = splitter.split_documents(documents)
+                        
+                        embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+                        st.session_state.vector_db = FAISS.from_documents(docs, embeddings)
+                        st.session_state.processed_file = repo_path.split('/')[-1] if repo_path.strip('/') else "Repo"
+                        st.success(f"Successfully indexed: {st.session_state.processed_file}")
+                        st.session_state.messages = [] # Clear chat for new context
+
+                except Exception as e:
+                    st.error(f"Error indexing repo: {e}")
+                finally:
+                    if is_github and temp_dir and os.path.exists(temp_dir):
+                        shutil.rmtree(temp_dir)
+        else:
+            st.warning("Please enter a path or URL.")
+
     st.divider()
     if st.button("Clear Chat"):
         st.session_state.messages = []
@@ -94,7 +154,17 @@ if prompt := st.chat_input("What would you like to know about the document?"):
                     api_key=os.getenv("GROQ_API_KEY")
                 )
                 
-                template = """You are a detailed document analysis tool. Provide accurate information based strictly on the text below.
+                template = """You are a detailed document analysis tool. Provide accurate information based strictly on the text below and the conversation history.
+                
+                ### YOUR MEMORY & CONTEXT:
+                - Use the provided conversation history to understand follow-up questions.
+                
+                ### ANALYSIS RULES:
+                - If the question is about the document but the information is truly missing, state: "Information not found."
+                - Avoid speculation.
+                
+                Conversation History:
+                {chat_history}
                 
                 Context:
                 {context}
@@ -106,9 +176,16 @@ if prompt := st.chat_input("What would you like to know about the document?"):
 
                 def format_docs(docs):
                     return "\n\n".join(doc.page_content for doc in docs)
+                
+                def format_history(messages):
+                    return "\n".join([f"{m['role']}: {m['content']}" for m in messages[-5:]])
 
                 chain = (
-                    {"context": retriever | format_docs, "question": RunnablePassthrough()}
+                    {
+                        "context": retriever | format_docs, 
+                        "question": RunnablePassthrough(),
+                        "chat_history": lambda _: format_history(st.session_state.messages)
+                    }
                     | custom_rag_prompt
                     | llm
                     | StrOutputParser()

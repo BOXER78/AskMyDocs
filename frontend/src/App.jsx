@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import axios from 'axios'
-import { 
-  FileUp, Send, Bot, User, Loader2, FileText, 
-  CheckCircle, AlertCircle, Copy, RefreshCw, 
-  HelpCircle, ChevronRight 
+import {
+  FileUp, Send, Bot, User, Loader2, FileText,
+  CheckCircle, AlertCircle, Copy, RefreshCw,
+  HelpCircle, ChevronRight
 } from 'lucide-react'
 import './App.css'
 
@@ -27,10 +27,13 @@ function App() {
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const [streamingMessage, setStreamingMessage] = useState('')
-  
+
   const [file, setFile] = useState(null)
   const [uploadStatus, setUploadStatus] = useState('idle')
   
+  const [repoPath, setRepoPath] = useState('')
+  const [repoStatus, setRepoStatus] = useState('idle')
+
   const messagesEndRef = useRef(null)
   const fileInputRef = useRef(null)
   const chatContainerRef = useRef(null)
@@ -40,10 +43,10 @@ function App() {
       messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
       return
     }
-    
+
     const container = chatContainerRef.current
     const isAtBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 150
-    
+
     if (isAtBottom) {
       messagesEndRef.current.scrollIntoView({ behavior: 'auto' })
     }
@@ -97,6 +100,28 @@ function App() {
     }
   }
 
+  const handleAnalyzeRepo = async (e) => {
+    e?.preventDefault()
+    if (!repoPath.trim()) return
+
+    setRepoStatus('uploading')
+    try {
+      await axios.post(`${API_BASE_URL}/analyze-repo`, { path: repoPath })
+      setRepoStatus('success')
+      setMessages(prev => [...prev, {
+        role: 'system',
+        content: `Repository analyzed: ${repoPath}`
+      }])
+      setFile({ name: repoPath.split('/').pop() || 'Repository' })
+      setRepoPath('')
+    } catch (err) {
+      console.error("Repo analysis error details:", err)
+      const errorMsg = err.response?.data?.detail || err.message
+      setRepoStatus('error')
+      alert(`Error analyzing repository: ${errorMsg}`)
+    }
+  }
+
   const simulateStreaming = async (text) => {
     const words = text.split(' ')
     let currentText = ''
@@ -112,11 +137,11 @@ function App() {
   const handleSend = async (queryText) => {
     const query = queryText || input
     if (!query.trim() || isTyping) return
-    
+
     setInput('')
     setMessages(prev => [...prev, { role: 'user', content: query }])
     setIsTyping(true)
-    
+
     const fullUrl = `${API_BASE_URL}/ask`
     try {
       const response = await axios.post(fullUrl, { query })
@@ -125,9 +150,9 @@ function App() {
     } catch (error) {
       setIsTyping(false)
       const msg = error.response ? ` (Status: ${error.response.status})` : ` (${error.message})`
-      setMessages(prev => [...prev, { 
-        role: 'ai', 
-        content: `Error connecting to ${fullUrl}${msg}. Please check the VITE_API_URL in Render.` 
+      setMessages(prev => [...prev, {
+        role: 'ai',
+        content: `Error connecting to ${fullUrl}${msg}. Please check the VITE_API_URL in Render.`
       }])
       console.error("Connection error at:", fullUrl, error)
     }
@@ -150,8 +175,8 @@ function App() {
           </p>
 
           <input type="file" accept=".pdf" className="file-input" ref={fileInputRef} onChange={handleFileChange} />
-          
-          <button 
+
+          <button
             className={`upload-btn ${uploadStatus === 'uploading' ? 'uploading' : ''}`}
             onClick={() => fileInputRef.current?.click()}
             disabled={uploadStatus === 'uploading'}
@@ -159,6 +184,42 @@ function App() {
             {uploadStatus === 'uploading' ? <Loader2 className="spinner" size={20} /> : <FileUp size={20} />}
             {uploadStatus === 'uploading' ? 'Analyzing...' : 'Upload PDF'}
           </button>
+
+          <div style={{ marginTop: '2.5rem', paddingTop: '2.5rem', borderTop: '1px solid var(--border-color)' }}>
+            <h2 style={{ fontSize: '0.85rem', color: 'var(--accent-color)', marginBottom: '1.25rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Explore Repository</h2>
+            <form onSubmit={handleAnalyzeRepo} theme-ignore="true" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <input 
+                type="text" 
+                value={repoPath}
+                autoComplete="off"
+                onChange={(e) => setRepoPath(e.target.value)}
+                placeholder="Local path or GitHub URL" 
+                style={{
+                  background: 'var(--bg-color)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: 'var(--radius)',
+                  padding: '1rem 1.4rem',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.95rem',
+                  outline: 'none',
+                  transition: 'var(--transition)'
+                }}
+              />
+              <button 
+                type="submit"
+                disabled={!repoPath.trim() || repoStatus === 'uploading'}
+                className={`upload-btn ${repoStatus === 'uploading' ? 'uploading' : ''}`}
+                style={{
+                  width: '100%',
+                  background: 'linear-gradient(135deg, #6c5ce7, #a29bfe)', // A subtle blue/purple that fits but distinguishes from PDF
+                  boxShadow: '0 8px 20px rgba(108, 92, 231, 0.2)'
+                }}
+              >
+                {repoStatus === 'uploading' ? <Loader2 className="spinner" size={20} /> : <RefreshCw size={20} />}
+                {repoStatus === 'uploading' ? 'Scanning...' : 'Analyze Repo'}
+              </button>
+            </form>
+          </div>
 
           {file && (
             <div className="file-status-card">
@@ -195,13 +256,13 @@ function App() {
                   {msg.role === 'ai' && (
                     <div className="message-actions">
                       <button className="action-btn" onClick={() => copyToClipboard(msg.content)} title="Copy"><Copy size={16} /></button>
-                      <button className="action-btn" onClick={() => handleSend(messages[idx-1]?.content)} title="Retry"><RefreshCw size={16} /></button>
+                      <button className="action-btn" onClick={() => handleSend(messages[idx - 1]?.content)} title="Retry"><RefreshCw size={16} /></button>
                     </div>
                   )}
                 </div>
               ))
             )}
-            
+
             {streamingMessage && (
               <div className="message ai">
                 <div className="message-meta"><Bot size={14} /><span>Assistant</span></div>
@@ -238,7 +299,7 @@ function App() {
             )}
 
             <form className="input-area" onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); handleSend(); }}>
-              <input 
+              <input
                 type="text" value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Ask me anything..."
