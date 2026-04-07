@@ -67,10 +67,7 @@ with st.sidebar:
                     if "youtube.com" in url_input or "youtu.be" in url_input:
                         loader = YoutubeLoader.from_youtube_url(url_input, add_video_info=True)
                     else:
-                        loader = WebBaseLoader(
-                            url_input,
-                            header_template={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
-                        )
+                        loader = WebBaseLoader(url_input)
                     
                     documents = loader.load()
                     splitter = RecursiveCharacterTextSplitter(chunk_size=1500, chunk_overlap=250)
