@@ -137,8 +137,11 @@ with st.sidebar:
 st.title("🦀 AskMyDocs - AI Assistant")
 st.caption("Ask questions about your uploaded PDF documents.")
 
-# Display chat messages
-for message in st.session_state.get("messages", []):
+# Display chat messages fail-safe
+if "messages" not in st.session_state:
+    st.session_state["messages"] = []
+
+for message in st.session_state["messages"]:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
@@ -190,11 +193,13 @@ if prompt := st.chat_input("What would you like to know about the document?"):
                 def format_history(messages):
                     return "\n".join([f"{m['role']}: {m['content']}" for m in messages[-5:]])
 
+                history_str = format_history(st.session_state["messages"])
+
                 chain = (
                     {
                         "context": retriever | format_docs, 
                         "question": RunnablePassthrough(),
-                        "chat_history": lambda _: format_history(st.session_state["messages"])
+                        "chat_history": lambda _: history_str
                     }
                     | custom_rag_prompt
                     | llm

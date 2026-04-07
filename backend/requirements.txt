@@ -6,6 +6,9 @@ langchain-groq
 langchain-huggingface
 faiss-cpu
 pypdf
+torch
+torchvision
+sentence-transformers
 python-dotenv
 sentence-transformers
 pydantic
