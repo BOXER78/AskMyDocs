@@ -26,7 +26,3 @@ app.include_router(chat.router, prefix="/api")
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the AskMyDocs API"}
-
-@app.get("/health")
-def health_check():
-    return {"status": "ok"}

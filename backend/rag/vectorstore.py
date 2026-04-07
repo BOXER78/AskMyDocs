@@ -1,5 +1,5 @@
 import os
-from langchain_community.document_loaders import PyPDFLoader, YoutubeLoader, WebBaseLoader
+from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_groq import ChatGroq
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -28,31 +28,6 @@ def process_and_store_document(file_path: str):
     else:
         vector_db.add_documents(docs)
 
-    setup_qa_chain()
-
-def process_and_store_url(url: str):
-    global vector_db, embeddings, chat_history
-    chat_history = []
-    
-    if "youtube.com" in url or "youtu.be" in url:
-        loader = YoutubeLoader.from_youtube_url(url, add_video_info=True)
-    else:
-        loader = WebBaseLoader(url)
-        
-    documents = loader.load()
-    splitter = RecursiveCharacterTextSplitter(chunk_size=1500, chunk_overlap=250)
-    docs = splitter.split_documents(documents)
-    
-    if vector_db is None:
-        vector_db = FAISS.from_documents(docs, embeddings)
-    else:
-        vector_db.add_documents(docs)
-        
-    setup_qa_chain()
-
-def setup_qa_chain():
-    global vector_db, qa_chain, chat_history, embeddings
-    
     retriever = vector_db.as_retriever(search_type="mmr", search_kwargs={"k": 5, "fetch_k": 20})
     llm = ChatGroq(temperature=0, model_name="llama-3.1-8b-instant")
     

@@ -31,9 +31,6 @@ function App() {
   const [file, setFile] = useState(null)
   const [uploadStatus, setUploadStatus] = useState('idle')
   
-  const [urlInput, setUrlInput] = useState('')
-  const [urlStatus, setUrlStatus] = useState('idle')
-  
   const messagesEndRef = useRef(null)
   const fileInputRef = useRef(null)
   const chatContainerRef = useRef(null)
@@ -100,26 +97,6 @@ function App() {
     }
   }
 
-  const handleLoadUrl = async (e) => {
-    e?.preventDefault()
-    if (!urlInput.trim()) return
-
-    setUrlStatus('uploading')
-    try {
-      await axios.post(`${API_BASE_URL}/load-url`, { url: urlInput })
-      setUrlStatus('success')
-      setMessages(prev => [...prev, {
-        role: 'system',
-        content: `URL analyzed: ${urlInput}`
-      }])
-      setFile({ name: urlInput }) // Dummy file object to trigger suggestions
-      setUrlInput('')
-    } catch (err) {
-      console.error("URL load error details:", err)
-      setUrlStatus('error')
-    }
-  }
-
   const simulateStreaming = async (text) => {
     const words = text.split(' ')
     let currentText = ''
@@ -182,27 +159,6 @@ function App() {
             {uploadStatus === 'uploading' ? <Loader2 className="spinner" size={20} /> : <FileUp size={20} />}
             {uploadStatus === 'uploading' ? 'Analyzing...' : 'Upload PDF'}
           </button>
-
-          <div style={{ marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem' }}>
-            <p className="upload-info" style={{ marginBottom: '0.5rem' }}>Or load a Web/YouTube URL</p>
-            <form onSubmit={handleLoadUrl} style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
-              <input 
-                type="url" 
-                value={urlInput} 
-                onChange={e => setUrlInput(e.target.value)}
-                placeholder="https://" 
-                style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)', background: '#1e1e24', color: 'white', fontSize: '13px' }}
-                disabled={urlStatus === 'uploading'}
-              />
-              <button 
-                type="submit"
-                className={`upload-btn ${urlStatus === 'uploading' ? 'uploading' : ''}`}
-                disabled={!urlInput.trim() || urlStatus === 'uploading'}
-              >
-                {urlStatus === 'uploading' ? <Loader2 className="spinner" size={20} /> : 'Load URL'}
-              </button>
-            </form>
-          </div>
 
           {file && (
             <div className="file-status-card">
