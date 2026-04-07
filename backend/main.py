@@ -27,3 +27,4 @@ app.include_router(chat.router, prefix="/api")
 def read_root():
     return {"message": "Welcome to the AskMyDocs API"}
 
+
