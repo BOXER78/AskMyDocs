@@ -37,7 +37,10 @@ def process_and_store_url(url: str):
     if "youtube.com" in url or "youtu.be" in url:
         loader = YoutubeLoader.from_youtube_url(url, add_video_info=True)
     else:
-        loader = WebBaseLoader(url)
+        loader = WebBaseLoader(
+            url,
+            header_template={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
+        )
         
     documents = loader.load()
     splitter = RecursiveCharacterTextSplitter(chunk_size=1500, chunk_overlap=250)
