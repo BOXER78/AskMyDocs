@@ -2,7 +2,7 @@
 
 AskMyDocs is a high-performance Retrieval-Augmented Generation (RAG) system built for searching and analyzing PDF documents through a natural chat interface. It leverages **Groq (Llama 3.1 8b)** for low-latency inference and **HuggingFace Embeddings** for local vector search.
 
-## ✨ Key Features
+## Key Features
 
 - **High-Speed RAG**: Sub-second responses using Groq's LPUs and Llama-3.1-8b-instant.
 - **Smart Retrieval**: Uses MMR (Maximum Marginal Relevance) for diverse context retrieval.
@@ -10,13 +10,13 @@ AskMyDocs is a high-performance Retrieval-Augmented Generation (RAG) system buil
 - **Modern Interface**: Clean, distraction-free React UI with simulated streaming for better UX.
 - **Scalable Backend**: FastAPI-powered microservice with optimized embedding globalization.
 
-## 📋 System Requirements
+## System Requirements
 
 - **Python**: 3.10 or higher.
 - **Node.js**: 18.x or higher.
 - **Environment**: Groq API Key required.
 
-## 🚀 Getting Started
+## Getting Started
 
 ### 1. Configuration
 
@@ -44,32 +44,32 @@ npm install
 npm run dev
 ```
 
-## 🔄 Project Architecture
+## Project Architecture
 
 ```mermaid
 graph TD
     subgraph "Frontend (React + Vite)"
-        A[📄 PDF Upload] -->|POST /upload| B(FastAPI)
-        C[💬 User Query] -->|POST /ask| B
+        A[ PDF Upload] -->|POST /upload| B(FastAPI)
+        C[ User Query] -->|POST /ask| B
     end
 
     subgraph "Backend (FastAPI)"
-        B -->|PyPDFLoader| D[📝 Raw Text]
-        D -->|RecursiveSplitter| E[🧩 Text Chunks]
-        E -->|all-MiniLM-L6-v2| F[📐 Embeddings]
-        F --> G[🗄️ FAISS Index]
+        B -->|PyPDFLoader| D[ Raw Text]
+        D -->|RecursiveSplitter| E[ Text Chunks]
+        E -->|all-MiniLM-L6-v2| F[ Embeddings]
+        F --> G[ FAISS Index]
     end
 
     subgraph "AI Engine (RAG)"
-        G -->|retriever| H[🔍 Context Retrieval]
-        H -->|Context + Query| I[🤖 Groq / Llama 3.1 8b]
+        G -->|retriever| H[ Context Retrieval]
+        H -->|Context + Query| I[ Groq / Llama 3.1 8b]
         I -->|System Output| J[⚡ API Response]
     end
 
     J -->|Streaming Effect| C
 ```
 
-## 📂 Project Structure
+##  Project Structure
 
 - `backend/main.py`: Entry point for the FastAPI server.
 - `backend/rag/vectorstore.py`: Core RAG logic (Chunking, Embeddings, FAISS).
