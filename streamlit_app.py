@@ -93,7 +93,17 @@ if prompt := st.chat_input("What would you like to know about the document?"):
                     api_key=os.getenv("GROQ_API_KEY")
                 )
                 
-                template = """You are a detailed document analysis tool. Provide accurate information based strictly on the text below.
+                template = """You are a detailed document analysis tool. Provide accurate information based strictly on the text below and the conversation history.
+                
+                ### YOUR MEMORY & CONTEXT:
+                - Use the provided conversation history to understand follow-up questions.
+                
+                ### ANALYSIS RULES:
+                - If the question is about the document but the information is truly missing, state: "Information not found."
+                - Avoid speculation.
+                
+                Conversation History:
+                {chat_history}
                 
                 Context:
                 {context}
@@ -105,9 +115,16 @@ if prompt := st.chat_input("What would you like to know about the document?"):
 
                 def format_docs(docs):
                     return "\n\n".join(doc.page_content for doc in docs)
+                
+                def format_history(messages):
+                    return "\n".join([f"{m['role']}: {m['content']}" for m in messages[-5:]])
 
                 chain = (
-                    {"context": retriever | format_docs, "question": RunnablePassthrough()}
+                    {
+                        "context": retriever | format_docs, 
+                        "question": RunnablePassthrough(),
+                        "chat_history": lambda _: format_history(st.session_state.messages)
+                    }
                     | custom_rag_prompt
                     | llm
                     | StrOutputParser()
