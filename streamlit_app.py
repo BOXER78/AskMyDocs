@@ -18,12 +18,13 @@ st.set_page_config(page_title="AskMyDocs", page_icon="🦀", layout="wide")
 load_dotenv()
 
 # Initialize session state for chat and vector store
+# Initialize session state for chat and vector store
 if "messages" not in st.session_state:
-    st.session_state.messages = []
+    st.session_state["messages"] = []
 if "vector_db" not in st.session_state:
-    st.session_state.vector_db = None
+    st.session_state["vector_db"] = None
 if "processed_file" not in st.session_state:
-    st.session_state.processed_file = None
+    st.session_state["processed_file"] = None
 
 # Sidebar for file upload
 with st.sidebar:
