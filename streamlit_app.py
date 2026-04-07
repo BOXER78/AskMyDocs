@@ -26,19 +26,20 @@ load_dotenv()
 load_dotenv("backend/.env")
 
 # Initialize session state for chat and vector store
+# Initialize session state for chat and vector store
 if "messages" not in st.session_state:
-    st.session_state.messages = []
+    st.session_state["messages"] = []
 if "vector_db" not in st.session_state:
-    st.session_state.vector_db = None
+    st.session_state["vector_db"] = None
 if "processed_file" not in st.session_state:
-    st.session_state.processed_file = None
+    st.session_state["processed_file"] = None
 
 # Sidebar for file upload
 with st.sidebar:
     st.title("📂 Document Upload")
     uploaded_file = st.file_uploader("Upload a PDF document", type="pdf")
     
-    if uploaded_file and uploaded_file.name != st.session_state.processed_file:
+    if uploaded_file and uploaded_file.name != st.session_state["processed_file"]:
         with st.spinner("Analyzing document..."):
             # Save to temp file
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
@@ -55,10 +56,10 @@ with st.sidebar:
                 
                 # Create Vector Store
                 embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-                st.session_state.vector_db = FAISS.from_documents(docs, embeddings)
-                st.session_state.processed_file = uploaded_file.name
+                st.session_state["vector_db"] = FAISS.from_documents(docs, embeddings)
+                st.session_state["processed_file"] = uploaded_file.name
                 st.success(f"Successfully processed: {uploaded_file.name}")
-                st.session_state.messages = [] # Clear chat for new doc
+                st.session_state["messages"] = [] # Clear chat for new doc
             except Exception as e:
                 st.error(f"Error processing file: {e}")
             finally:
@@ -110,10 +111,10 @@ with st.sidebar:
                         docs = splitter.split_documents(documents)
                         
                         embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-                        st.session_state.vector_db = FAISS.from_documents(docs, embeddings)
-                        st.session_state.processed_file = repo_path.split('/')[-1] if repo_path.strip('/') else "Repo"
+                        st.session_state["vector_db"] = FAISS.from_documents(docs, embeddings)
+                        st.session_state["processed_file"] = repo_path.split('/')[-1] if repo_path.strip('/') else "Repo"
                         st.success(f"Successfully indexed: {st.session_state.processed_file}")
-                        st.session_state.messages = [] # Clear chat for new context
+                        st.session_state["messages"] = [] # Clear chat for new context
 
                 except subprocess.CalledProcessError as sc:
                     st.error(f"Git Clone Error: {sc.stderr.decode() if sc.stderr else str(sc)}")
@@ -129,7 +130,7 @@ with st.sidebar:
 
     st.divider()
     if st.button("Clear Chat"):
-        st.session_state.messages = []
+        st.session_state["messages"] = []
         st.rerun()
 
 # Main Chat Interface
@@ -137,26 +138,26 @@ st.title("🦀 AskMyDocs - AI Assistant")
 st.caption("Ask questions about your uploaded PDF documents.")
 
 # Display chat messages
-for message in st.session_state.messages:
+for message in st.session_state.get("messages", []):
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
 # Chat input
 if prompt := st.chat_input("What would you like to know about the document?"):
     # Add user message to history
-    st.session_state.messages.append({"role": "user", "content": prompt})
+    st.session_state["messages"].append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     # Generate response
-    if not st.session_state.vector_db:
+    if not st.session_state.get("vector_db"):
         with st.chat_message("assistant"):
             st.warning("Please upload a PDF document in the sidebar first.")
     else:
         with st.chat_message("assistant"):
             try:
                 # Setup components
-                retriever = st.session_state.vector_db.as_retriever(search_type="mmr", search_kwargs={"k": 5})
+                retriever = st.session_state["vector_db"].as_retriever(search_type="mmr", search_kwargs={"k": 5})
                 llm = ChatGroq(
                     temperature=0, 
                     model_name="llama-3.1-8b-instant",
@@ -193,7 +194,7 @@ if prompt := st.chat_input("What would you like to know about the document?"):
                     {
                         "context": retriever | format_docs, 
                         "question": RunnablePassthrough(),
-                        "chat_history": lambda _: format_history(st.session_state.messages)
+                        "chat_history": lambda _: format_history(st.session_state["messages"])
                     }
                     | custom_rag_prompt
                     | llm
@@ -205,7 +206,7 @@ if prompt := st.chat_input("What would you like to know about the document?"):
                 st.markdown(response)
                 
                 # Add assistant response to history
-                st.session_state.messages.append({"role": "assistant", "content": response})
+                st.session_state["messages"].append({"role": "assistant", "content": response})
                 
             except Exception as e:
                 st.error(f"AI Error: {e}")
