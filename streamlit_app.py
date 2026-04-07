@@ -1,7 +1,7 @@
 import streamlit as st
 import os
 import tempfile
-from langchain_community.document_loaders import PyPDFLoader, YoutubeLoader, WebBaseLoader
+from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_groq import ChatGroq
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -58,39 +58,13 @@ with st.sidebar:
                     os.remove(tmp_path)
     
     st.divider()
-    st.subheader("🔗 Load from URL")
-    url_input = st.text_input("Enter Web or YouTube URL", placeholder="https://...")
-    if st.button("Process URL"):
-        if url_input:
-            with st.spinner("Analyzing URL..."):
-                try:
-                    if "youtube.com" in url_input or "youtu.be" in url_input:
-                        loader = YoutubeLoader.from_youtube_url(url_input, add_video_info=True)
-                    else:
-                        loader = WebBaseLoader(url_input)
-                    
-                    documents = loader.load()
-                    splitter = RecursiveCharacterTextSplitter(chunk_size=1500, chunk_overlap=250)
-                    docs = splitter.split_documents(documents)
-                    
-                    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-                    st.session_state.vector_db = FAISS.from_documents(docs, embeddings)
-                    st.session_state.processed_file = url_input
-                    st.success(f"Successfully processed URL: {url_input}")
-                    st.session_state.messages = []
-                except Exception as e:
-                    st.error(f"Error processing URL: {e}")
-        else:
-            st.warning("Please enter a URL first.")
-    
-    st.divider()
     if st.button("Clear Chat"):
         st.session_state.messages = []
         st.rerun()
 
 # Main Chat Interface
 st.title("🦀 AskMyDocs - AI Assistant")
-st.caption("Ask questions about your uploaded PDFs or Web/YouTube content.")
+st.caption("Ask questions about your uploaded PDF documents.")
 
 # Display chat messages
 for message in st.session_state.messages:
@@ -119,17 +93,7 @@ if prompt := st.chat_input("What would you like to know about the document?"):
                     api_key=os.getenv("GROQ_API_KEY")
                 )
                 
-                template = """You are a detailed document analysis tool. Provide accurate information based strictly on the text below and the conversation history.
-                
-                ### YOUR MEMORY & CONTEXT:
-                - Use the provided conversation history to understand follow-up questions.
-                
-                ### ANALYSIS RULES:
-                - If the question is about the document but the information is truly missing, state: "Information not found."
-                - Avoid speculation.
-                
-                Conversation History:
-                {chat_history}
+                template = """You are a detailed document analysis tool. Provide accurate information based strictly on the text below.
                 
                 Context:
                 {context}
@@ -141,16 +105,9 @@ if prompt := st.chat_input("What would you like to know about the document?"):
 
                 def format_docs(docs):
                     return "\n\n".join(doc.page_content for doc in docs)
-                
-                def format_history(messages):
-                    return "\n".join([f"{m['role']}: {m['content']}" for m in messages[-5:]])
 
                 chain = (
-                    {
-                        "context": retriever | format_docs, 
-                        "question": RunnablePassthrough(),
-                        "chat_history": lambda _: format_history(st.session_state.messages)
-                    }
+                    {"context": retriever | format_docs, "question": RunnablePassthrough()}
                     | custom_rag_prompt
                     | llm
                     | StrOutputParser()
